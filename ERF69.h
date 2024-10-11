@@ -8,8 +8,8 @@
 #include <SPI.h>
 
 #define RF69_SPI_SETTINGS 8000000, MSBFIRST, SPI_MODE0
-#define RF69_MODE_SWITCH_TOUT 100
-#define RF69_PKT_SEND_TOUT    4000
+#define RF69_MODE_SWITCH_TOUT 50
+#define RF69_PKT_SEND_TOUT    1000
 
 // Operation modes
 typedef enum {
@@ -52,8 +52,8 @@ public:
 	static const uint32_t max_baud_rate = 200000; // 500kHz rx bandwidth (the maximum allowed)
 
 	// Create transceiver object given the chip select and reset pins
-	RF69(uint8_t cs_pin, uint8_t rst_pin)
-		: m_cs_pin(cs_pin), m_rst_pin(rst_pin)
+	RF69(uint8_t cs_pin, uint8_t rst_pin, uint8_t miso, uint8_t mosi, uint8_t sck)
+		: m_cs_pin(cs_pin), m_rst_pin(rst_pin), m_miso_pin(miso), m_mosi_pin(mosi), m_sck_pin(sck)
 		, m_spi_settings(RF69_SPI_SETTINGS)
 		{}
 
@@ -192,6 +192,9 @@ protected:
 private:
 	uint8_t		m_cs_pin;
 	uint8_t		m_rst_pin;
+	uint8_t		m_miso_pin;
+	uint8_t		m_mosi_pin;
+	uint8_t		m_sck_pin;
 	SPISettings	m_spi_settings;
 	struct {
 		uint8_t	last_mode : 3;

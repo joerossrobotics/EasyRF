@@ -10,7 +10,11 @@
 
 void RF69::begin()
 {
-	SPI.begin();
+	SPI1.setCS(m_cs_pin);
+	SPI1.setMISO(m_miso_pin);
+	SPI1.setMOSI(m_mosi_pin);
+	SPI1.setSCK(m_sck_pin);
+	SPI1.begin();
 	digitalWrite(m_cs_pin, HIGH);
 	pinMode(m_cs_pin, OUTPUT);
 	digitalWrite(m_rst_pin, LOW);
@@ -34,19 +38,19 @@ bool RF69::probe()
 void RF69::tx_begin()
 {
 	digitalWrite(m_cs_pin, LOW);
-	SPI.beginTransaction(m_spi_settings);
+	SPI1.beginTransaction(m_spi_settings);
 }
 
 void RF69::tx_end()
 {
-	SPI.endTransaction();
+	SPI1.endTransaction();
 	digitalWrite(m_cs_pin, HIGH);
 }
 
 uint8_t	RF69::tx_reg(uint16_t w)
 {
 	tx_begin();
-	uint8_t r = SPI.transfer16(w);
+	uint8_t r = SPI1.transfer16(w);
 	tx_end();
 	return r;
 }
@@ -54,7 +58,7 @@ uint8_t	RF69::tx_reg(uint16_t w)
 void RF69::wr_burst(uint8_t addr, uint8_t const* data, uint8_t len)
 {
 	tx_begin();
-	SPI.transfer16(((0x80 | addr) << 8) | *data);
+	SPI1.transfer16(((0x80 | addr) << 8) | *data);
 	for (++data, --len; len; ++data, --len)
 		SPI.transfer(*data);
 	tx_end();
@@ -63,14 +67,14 @@ void RF69::wr_burst(uint8_t addr, uint8_t const* data, uint8_t len)
 bool RF69::rd_packet(uint8_t* buff, uint8_t buff_len)
 {
 	tx_begin();
-	uint8_t len = SPI.transfer16(0);
+	uint8_t len = SPI1.transfer16(0);
 	if (len >= buff_len)
 		goto skip;
 
 	*buff = len;
 	for (++buff; len; --len, ++buff)
 	{
-		uint8_t b = SPI.transfer(0);
+		uint8_t b = SPI1.transfer(0);
 		*buff = b;
 	}
 	tx_end();
@@ -93,15 +97,15 @@ void RF69::wr_packet_protected(uint8_t const* data)
 	uint8_t len = *data;
 	clr_fifo();
 	tx_begin();
-	SPI.transfer16((0x80 << 8) | (len + 4));
+	SPI1.transfer16((0x80 << 8) | (len + 4));
 	for (++data; len; ++data, --len) {
 		uint8_t b = *data;
 		SPI.transfer(b);
 		hash ^= b;
 		hash *= FNV_PRIME;
 	}
-	SPI.transfer16(hash >> 16);
-	SPI.transfer16(hash);
+	SPI1.transfer16(hash >> 16);
+	SPI1.transfer16(hash);
 	tx_end();
 }
 
@@ -110,21 +114,21 @@ bool RF69::rd_packet_protected(uint8_t* buff, uint8_t buff_len)
 	uint32_t hash = FNV_OFFS;
 	uint16_t h_high, h_low;
 	tx_begin();
-	uint8_t len = SPI.transfer16(0);
+	uint8_t len = SPI1.transfer16(0);
 	if (len < 4 || len >= buff_len + 4)
 		goto skip;
 
 	*buff = (len -= 4);
 	for (++buff; len; --len, ++buff)
 	{
-		uint8_t b = SPI.transfer(0);
+		uint8_t b = SPI1.transfer(0);
 		*buff = b;
 		hash ^= b;
 		hash *= FNV_PRIME;
 	}
 
-	h_high = SPI.transfer16(0);
-	h_low  = SPI.transfer16(0);
+	h_high = SPI1.transfer16(0);
+	h_low  = SPI1.transfer16(0);
 	tx_end();
 	return h_high == (uint16_t)(hash >> 16) && h_low == (uint16_t)hash;
 
